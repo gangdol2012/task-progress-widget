@@ -12,7 +12,8 @@ async function getStateDir($: any): Promise<string> {
   if (!stateDir) {
     let home = ''
     try {
-      home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME')) ?? ''
+      // USERPROFILE on Windows, HOME on macOS.
+      home = (await $.env.get('USERPROFILE')) || (await $.env.get('HOME')) || ''
     } catch (err) {
       await noteError($, 'env.get', err)
     }
@@ -161,8 +162,9 @@ export const register: Register = on => {
   // widget can tell "working now" from "finished" by how fresh the file is.
   // A tool that needs the person (a question, a plan to approve) marks the
   // session as waiting until it returns. Permission prompts are flagged by
-  // the hook script instead (cli/progress-hook.ps1, Notification event): the
-  // mod can't tell a prompt shown to the person from one auto mode settles.
+  // the terminal hook instead (cli/progress-hook.ps1 on Windows,
+  // cli/progress-hook on macOS; Notification event): the mod can't tell a
+  // prompt shown to the person from one auto mode settles.
   on('tool.call', async ($, e, next) => {
     await persist($)
     const tool = String((e as { tool?: unknown }).tool ?? '')
