@@ -23,6 +23,14 @@ echo "Validating the mod..."
 "$claude" plugin validate "$root/task-progress-bar" >/dev/null \
     || { echo "The mod failed 'claude plugin validate'; fix it before releasing" >&2; exit 1; }
 
+# The Windows widget's About line shows its own VERSION (the Mac app takes
+# its version from plugin.json by itself); it must match the mod's.
+widget_version="$(sed -n 's/^VERSION = "\([^"]*\)".*/\1/p' "$root/task-progress-bar/widget/progress_widget.py" | head -1)"
+if [ "$widget_version" != "$version" ]; then
+    echo "progress_widget.py has VERSION = \"$widget_version\" but plugin.json says $version; make them match" >&2
+    exit 1
+fi
+
 "$root/mac/build.sh" --universal --out "$build/bin"
 
 mkdir -p "$stage/mac" "$root/dist"

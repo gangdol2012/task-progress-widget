@@ -55,7 +55,7 @@ The app isn't signed with an Apple Developer ID. The installer removes the "down
 - Click a line to jump to that session in the Claude app. (Terminal sessions, marked with ›, can't be opened this way.)
 - Drag it anywhere to move it. It reopens where you left it.
 - To resize it, drag the bottom-right corner. On Windows you can also hold Ctrl and scroll over it. On a Mac you can hold Command (or Control) and scroll, or pinch on a trackpad.
-- Right-click it (on a Mac, Control-click works too) for settings: a sound when a session finishes or needs you, the theme (match the system, dark, or light), and resetting its size and position.
+- Right-click it (on a Mac, Control-click works too) for settings: a sound when a session finishes or needs you, the theme (match the system, dark, or light), and resetting its size and position. The menu's last line shows the widget's version and opens this project's page.
 - If Claude isn't using a task list for a job (quick questions, for example), the line shows a block sliding back and forth instead of a filling bar. In a terminal, Claude often skips the task list for small jobs, so expect the sliding block more often there.
 
 When Claude controls your computer on Windows, the app minimizes other windows, this one included. The widget comes straight back, and for about a minute it ignores clicks and stays out of screen captures so it can't get in Claude's way. After that it behaves normally again. The Mac version does the same if it's ever hidden while Claude is in control. It never takes the keyboard from the app you're using.

@@ -22,6 +22,13 @@ Write-Host "Validating the mod..."
 & $claude plugin validate (Join-Path $root "task-progress-bar") | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "The mod failed 'claude plugin validate'; fix it before releasing" }
 
+# The widget's About line shows its own VERSION; it must match the mod's.
+$widgetSource = Get-Content (Join-Path $root "task-progress-bar\widget\progress_widget.py") -Raw
+$widgetVersion = [regex]::Match($widgetSource, '(?m)^VERSION = "([^"]+)"').Groups[1].Value
+if ($widgetVersion -ne $version) {
+    throw "progress_widget.py has VERSION = `"$widgetVersion`" but plugin.json says $version; make them match"
+}
+
 Write-Host "Building TaskProgressWidget.exe (v$version)..."
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name TaskProgressWidget `
     --distpath (Join-Path $build "exe") --workpath (Join-Path $build "work") --specpath $build `

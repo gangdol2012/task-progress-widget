@@ -96,6 +96,12 @@ let APP_SUPPORT = HOME + "/Library/Application Support"
 let SESSION_LINK = "claude://claude.ai/epitaxy/"
 let TITLE_REFRESH_S = 10.0
 let SHOW_NOTE = Notification.Name("io.github.ohmygoditisme.claude-progress.show")
+// For the menu's About line, as on Windows. The version comes from the
+// app's Info.plist, which mac/build.sh fills in from .claude-plugin/plugin.json,
+// so it can't fall out of step; a bare binary outside the app has none.
+let VERSION = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+let AUTHOR = "OhMyGodItIsMe"
+let PROJECT_URL = "https://github.com/OhMyGodItIsMe/task-progress-widget"
 
 let WAITING_TEXT = [
     "permission": "Waiting for your permission",
@@ -1008,7 +1014,20 @@ final class Widget: NSObject, NSApplicationDelegate {
         let close = NSMenuItem(title: "Close widget", action: #selector(closeWidget), keyEquivalent: "")
         close.target = self
         menu.addItem(close)
+
+        menu.addItem(.separator())
+        let version = VERSION.isEmpty ? "" : " v\(VERSION)"
+        let about = NSMenuItem(title: "About: Task progress widget\(version) by \(AUTHOR)",
+                               action: #selector(openProject), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
         NSMenu.popUpContextMenu(menu, with: e, for: view)
+    }
+
+    @objc func openProject() {
+        if let url = URL(string: PROJECT_URL), !NSWorkspace.shared.open(url) {
+            logError("open project page", PROJECT_URL)
+        }
     }
 
     @objc func toggleSound() {

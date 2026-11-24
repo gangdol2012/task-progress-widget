@@ -42,6 +42,9 @@ THEMES = {
 KEY = "#010203"  # made transparent: gives the card rounded corners
 
 TITLE = "Claude progress"
+VERSION = "0.3.0"  # keep in step with .claude-plugin/plugin.json
+AUTHOR = "OhMyGodItIsMe"
+PROJECT_URL = "https://github.com/OhMyGodItIsMe/task-progress-widget"
 W = 320
 PAD = 16
 RADIUS = 14
@@ -458,6 +461,17 @@ def main() -> None:
     menu.add_separator()
     menu.add_command(label="Reset size and position", command=reset_place)
     menu.add_command(label="Close widget", command=root.destroy)
+    menu.add_separator()
+
+    def open_project() -> None:
+        try:
+            import webbrowser
+            webbrowser.open(PROJECT_URL)
+        except Exception as ex:
+            log_error("open project page", ex)
+
+    menu.add_command(label=f"About: Task progress widget v{VERSION} by {AUTHOR}",
+                     command=open_project)
 
     def context(e: "tk.Event") -> None:
         try:
