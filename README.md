@@ -22,7 +22,7 @@ Early. It works on the computers it was built on and hasn't been tried on many o
 
 - macOS 11 (Big Sur) or later, Apple silicon or Intel
 - The Claude desktop app (Code tab), or Claude Code in a terminal
-- Nothing else if you use the release download. Installing from the source code builds the widget on your Mac, which needs Apple's command line tools (`xcode-select --install`). If you have `git`, you most likely have them already.
+- Nothing else if you use the installer or the release ZIP. Installing from the source code builds the widget on your Mac, which needs Apple's command line tools (`xcode-select --install`). If you have `git`, you most likely have them already.
 
 ## Install on Windows
 
@@ -36,19 +36,20 @@ Windows may warn that the .exe is from an unknown publisher, because it isn't co
 
 ## Install on macOS
 
-1. Download the Mac ZIP (`…-mac.zip`) from the [latest release](https://github.com/OhMyGodItIsMe/task-progress-widget/releases/latest) and unzip it. It includes a ready-made app for Apple silicon and Intel Macs. (Or clone this repository; the installer then builds the app from source.)
-2. Open Terminal and run the installer. Type `bash `, drag `install.command` from the unzipped folder into the Terminal window, and press Return. For example:
+1. Download `Claude-Progress-….pkg` from the [latest release](https://github.com/OhMyGodItIsMe/task-progress-widget/releases/latest) and double-click it. It's signed and notarized by Apple, so macOS opens it without warnings. Follow the steps; it asks for your Mac password to put the app in Applications.
+2. Claude loads the widget's mod when it starts, so if Claude is open, the installer asks whether to restart it now or later. Restarting stops anything Claude is working on at that moment. If you choose Later, fully quit Claude when it suits you (Claude menu > Quit Claude, or Command-Q; closing the window isn't enough) and open it again. Terminal sessions you start after installing pick it up on their own.
 
-   ```bash
-   bash ~/Downloads/task-progress-widget/install.command
-   ```
+The widget appears in the top-right corner of your main screen, on every desktop (Space). It opens by itself when you log in, and macOS may show a "Background Items Added" notice for it. You can turn that off in System Settings > General > Login Items. If you close the widget, open **Claude Progress** from Applications, Launchpad, or Spotlight.
 
-   Double-clicking `install.command` works too, but macOS blocks scripts downloaded from the internet. If it says it can't verify the file, either use Terminal as above, or open System Settings > Privacy & Security and choose "Open Anyway".
-3. Fully quit Claude and open it again: Claude menu > Quit Claude, or Command-Q. Closing the window isn't enough. Terminal sessions you start after installing pick it up on their own.
+The installer sets Claude up for the person who runs it. Someone else on the same Mac can set it up for themselves by running this in Terminal:
 
-The widget appears in the top-right corner of your main screen, on every desktop (Space). It opens by itself when you log in, and macOS may show a "Background Items Added" notice for it. You can turn that off in System Settings > General > Login Items. If you close the widget, open **Claude Progress** from your Applications folder, Launchpad, or Spotlight.
+```bash
+bash "/Applications/Claude Progress.app/Contents/Resources/setup.sh"
+```
 
-The app isn't signed with an Apple Developer ID. The installer removes the "downloaded from the internet" mark from the files it installs, so macOS opens it without asking.
+**Without the installer.** The release also has a ZIP (`…-mac.zip`), or you can clone this repository; then `install.command` builds the app from source. Run it in Terminal: type `bash `, drag `install.command` into the window, and press Return. It puts the app in `~/Applications`, doesn't need your password, and asks about restarting Claude right there in Terminal. (macOS blocks double-clicking scripts downloaded from the internet, which is why it runs through `bash`.)
+
+Release downloads are signed with a Developer ID and notarized by Apple. A copy built from source is signed only for your own Mac.
 
 ## Using it
 
@@ -63,7 +64,13 @@ When Claude controls your computer on Windows, the app minimizes other windows, 
 ## Uninstall
 
 - **Windows:** double-click `uninstall.bat`, then restart Claude.
-- **macOS:** run `bash uninstall.command` from the unzipped folder (or double-click it), then restart Claude.
+- **macOS:** run this in Terminal, then restart Claude. It asks for your Mac password to remove the app from Applications.
+
+  ```bash
+  bash "/Applications/Claude Progress.app/Contents/Resources/uninstall.command"
+  ```
+
+  If you used `install.command`, the app is in your own Applications folder instead: `bash ~/Applications/Claude\ Progress.app/Contents/Resources/uninstall.command`, or run `uninstall.command` from the folder you installed from.
 
 ## What the installer changes
 
@@ -75,10 +82,10 @@ When Claude controls your computer on Windows, the app minimizes other windows, 
 
 **macOS**
 
-- Copies `task-progress-bar`, with the terminal hook, to `~/.claude/mods/task-progress-bar`.
-- In `~/.claude/settings.json`, sets `CLAUDE_CODE_PLUGIN_DIRS` so the desktop app loads the mod, and adds hooks for terminal Claude Code. Your other settings, hooks, and the order of everything are kept, and a backup of the old file is saved next to it first. If `CLAUDE_CODE_PLUGIN_DIRS` already lists another mod folder, the installer keeps it and adds this one after it. Run `install.command --no-terminal-hooks` to skip the hooks.
-- Puts **Claude Progress.app** in `~/Applications`.
-- Adds a launch agent, `~/Library/LaunchAgents/io.github.ohmygoditisme.claude-progress.plist`, which opens the widget when you log in. It also reopens the widget if it ever crashes. Closing it yourself keeps it closed. Run `install.command --no-login-item` to skip it.
+- Puts **Claude Progress.app** in `/Applications` (the installer) or `~/Applications` (`install.command`). The app carries everything else below.
+- For the person installing, copies the mod, with the terminal hook, to `~/.claude/mods/task-progress-bar`.
+- In `~/.claude/settings.json`, sets `CLAUDE_CODE_PLUGIN_DIRS` so the desktop app loads the mod, and adds hooks for terminal Claude Code. Your other settings, hooks, and the order of everything are kept, and a backup of the old file is saved next to it first. If `CLAUDE_CODE_PLUGIN_DIRS` already lists another mod folder, the installer keeps it and adds this one after it. Run `install.command` or `setup.sh` with `--no-terminal-hooks` to skip the hooks.
+- Adds a launch agent, `~/Library/LaunchAgents/io.github.ohmygoditisme.claude-progress.plist`, which opens the widget when you log in. It also reopens the widget if it ever crashes. Closing it yourself keeps it closed. Run `install.command` or `setup.sh` with `--no-login-item` to skip it.
 
 ## How it works
 
@@ -93,7 +100,7 @@ Session titles and the links for opening a session come from the Claude app's ow
 To build the release ZIPs yourself:
 
 - **Windows:** install PyInstaller (`python -m pip install --user pyinstaller`) and run `make-release.ps1`.
-- **macOS:** run `./make-release-mac.sh`. It needs Apple's command line tools. `mac/build.sh` alone builds the app and hook for just your Mac, into `build/mac`.
+- **macOS:** run `./make-release-mac.sh` for the installer (`.pkg`) and the ZIP. It needs Apple's command line tools. Add `--notarize <profile>` to sign them with your Developer ID Application and Installer certificates and have Apple notarize them; `<profile>` is a keychain profile made once with `xcrun notarytool store-credentials`. `mac/build.sh` alone builds the app for just your Mac, into `build/mac`.
 
 ## License
 

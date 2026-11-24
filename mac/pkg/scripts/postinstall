@@ -1,0 +1,22 @@
+#!/bin/bash
+# Runs as root once the .pkg has put Claude Progress.app in Applications:
+# sets Claude up for the person installing, by running the app's setup.sh
+# as them (in their login session, with their home folder). Its output goes
+# to the installer log (/var/log/install.log).
+
+app="${3%/}/Applications/Claude Progress.app"
+[ -d "$app" ] || app="/Applications/Claude Progress.app"
+setup="$app/Contents/Resources/setup.sh"
+
+user="$(stat -f%Su /dev/console)"
+case "$user" in
+    ""|root|loginwindow|_mbsetupuser)
+        # Installed with no one logged in (from the command line, say).
+        echo "Claude Progress: no one is logged in, so Claude wasn't set up."
+        echo "Each person can do that with:  bash \"$setup\""
+        exit 0
+        ;;
+esac
+uid="$(id -u "$user")" || exit 1
+# --ask-restart: if Claude is open, a window asks whether to restart it now.
+launchctl asuser "$uid" sudo -u "$user" -H /bin/bash "$setup" --ask-restart

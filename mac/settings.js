@@ -105,8 +105,11 @@ function install(settings, modDir, hookBin, withHooks) {
       cfg.env.CLAUDE_CODE_PLUGIN_DIRS = `${cur}:${modDir}`
       said.push('[ok] Mod turned on (Claude desktop app), next to the mod folder you already had:')
       said.push(`     ${cur}`)
+    } else if (typeof cur === 'string' && cur.trim()) {
+      // setup.sh reads this line: Claude already loads the mod folder.
+      said.push('[ok] Mod already turned on (Claude desktop app)')
     } else {
-      cfg.env.CLAUDE_CODE_PLUGIN_DIRS = typeof cur === 'string' && cur.trim() ? cur : modDir
+      cfg.env.CLAUDE_CODE_PLUGIN_DIRS = modDir
       said.push('[ok] Mod turned on (Claude desktop app)')
     }
   }

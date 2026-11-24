@@ -1,6 +1,6 @@
 {
   "name": "task-progress-bar",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Reports each Claude session's task-list progress and waiting state to the floating task progress widget.",
   "author": { "name": "OhMyGodItIsMe", "url": "https://github.com/OhMyGodItIsMe" },
   "homepage": "https://github.com/OhMyGodItIsMe/task-progress-widget",

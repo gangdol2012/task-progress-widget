@@ -42,7 +42,7 @@ THEMES = {
 KEY = "#010203"  # made transparent: gives the card rounded corners
 
 TITLE = "Claude progress"
-VERSION = "0.3.0"  # keep in step with .claude-plugin/plugin.json
+VERSION = "0.3.1"  # keep in step with .claude-plugin/plugin.json
 AUTHOR = "OhMyGodItIsMe"
 PROJECT_URL = "https://github.com/OhMyGodItIsMe/task-progress-widget"
 W = 320

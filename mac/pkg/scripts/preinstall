@@ -1,0 +1,13 @@
+#!/bin/bash
+# Runs as root before the .pkg puts the app in place: closes the widget of
+# the person installing, so the app can be replaced cleanly. (Taken out of
+# launchd first, or launchd would start it again.)
+
+user="$(stat -f%Su /dev/console)"
+case "$user" in
+    ""|root|loginwindow|_mbsetupuser) exit 0 ;;
+esac
+uid="$(id -u "$user")" || exit 0
+launchctl bootout "gui/$uid/io.github.ohmygoditisme.claude-progress" >/dev/null 2>&1
+pkill -u "$uid" -x ClaudeProgress >/dev/null 2>&1
+exit 0

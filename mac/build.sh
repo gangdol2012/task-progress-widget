@@ -1,13 +1,19 @@
 #!/bin/bash
-# Builds the macOS widget ("Claude Progress.app") and the terminal hook
-# (progress-hook) from source. Needs Apple's command line tools
-# (xcode-select --install) or Xcode.
+# Builds the macOS widget, "Claude Progress.app", from source. The app is
+# self-contained: besides the widget it carries the mod, the terminal hook
+# and the per-person setup and uninstall scripts, so the .pkg installer and
+# install.command both set Claude up from what's inside it. Needs Apple's
+# command line tools (xcode-select --install) or Xcode.
 #
-#   mac/build.sh [--universal] [--out DIR]
+#   mac/build.sh [--universal] [--sign IDENTITY] [--out DIR]
 #
-# --universal builds for both Apple silicon and Intel Macs (for releases);
-# without it, only for this Mac. Output goes to build/mac unless --out says
-# otherwise.
+# --universal  build for both Apple silicon and Intel Macs (for releases);
+#              without it, only for this Mac.
+# --sign       sign with this Developer ID Application identity, with the
+#              hardened runtime and a secure timestamp, ready to notarize.
+#              Without it the app gets an ad-hoc signature, which is enough
+#              to run on the Mac that built it.
+# --out        where to put the app (default: build/mac).
 
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -15,9 +21,11 @@ root="$(cd "$here/.." && pwd)"
 mod="$root/task-progress-bar"
 out="$root/build/mac"
 universal=0
+identity=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --universal) universal=1 ;;
+        --sign) identity="$2"; shift ;;
         --out) out="$2"; shift ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
@@ -50,8 +58,9 @@ compile() {
 
 mkdir -p "$out"
 app="$out/Claude Progress.app"
-rm -rf "$app" "$out/progress-hook"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+res="$app/Contents/Resources"
+rm -rf "$app"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$res"
 
 echo "Building the widget ($archs)..."
 compile "$app/Contents/MacOS/ClaudeProgress" "$mod/widget/ProgressWidget.swift" -framework AppKit
@@ -60,16 +69,34 @@ printf 'APPL????' > "$app/Contents/PkgInfo"
 
 # The icon is drawn by the widget itself, so it always matches its colors.
 "$app/Contents/MacOS/ClaudeProgress" --render-icon "$work/AppIcon.iconset"
-iconutil -c icns -o "$app/Contents/Resources/AppIcon.icns" "$work/AppIcon.iconset"
+iconutil -c icns -o "$res/AppIcon.icns" "$work/AppIcon.iconset"
 
 echo "Building the terminal hook ($archs)..."
-compile "$out/progress-hook" "$mod/cli/progress-hook.swift"
+compile "$app/Contents/Helpers/progress-hook" "$mod/cli/progress-hook.swift"
 
-# Ad-hoc signatures: required to run on Apple silicon, and they tie the
-# app's Info.plist to its code. (Not a Developer ID; see the README.)
-codesign --force --sign - "$out/progress-hook"
-codesign --force --sign - "$app"
+# What setup.sh installs for each person: the mod (without Windows
+# binaries or anything built), plus the scripts themselves.
+ditto "$mod" "$res/task-progress-bar"
+rm -rf "$res/task-progress-bar/.claude-plugin/types" "$res/task-progress-bar/last-error.txt" \
+    "$res/task-progress-bar/widget/TaskProgressWidget.exe" "$res/task-progress-bar/widget/Claude Progress.app" \
+    "$res/task-progress-bar/cli/progress-hook"
+find "$res/task-progress-bar" \( -name __pycache__ -o -name .DS_Store \) -prune -exec rm -rf {} +
+cp "$here/setup.sh" "$here/settings.js" "$res/"
+cp "$root/uninstall.command" "$res/uninstall.command"
+chmod +x "$res/setup.sh" "$res/uninstall.command"
+xattr -cr "$app"
 
-echo "Built v$version:"
-echo "    $app"
-echo "    $out/progress-hook"
+# Inside out: the hook first, then the app, which seals everything in it.
+if [ -n "$identity" ]; then
+    echo "Signing with $identity..."
+    sign=(codesign --force --options runtime --timestamp --sign "$identity")
+else
+    # Ad-hoc: required to run on Apple silicon, and ties the app's
+    # Info.plist to its code. (Not a Developer ID; nothing to notarize.)
+    sign=(codesign --force --sign -)
+fi
+"${sign[@]}" "$app/Contents/Helpers/progress-hook"
+"${sign[@]}" "$app"
+codesign --verify --deep --strict "$app"
+
+echo "Built v$version: $app"

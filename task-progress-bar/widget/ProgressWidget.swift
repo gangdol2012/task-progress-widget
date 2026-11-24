@@ -16,6 +16,7 @@
 //   ClaudeProgress [state dir]                 the widget
 //   ClaudeProgress --snapshot out.png [--theme dark|light] [--scale 1.5] [state dir]
 //   ClaudeProgress --render-icon out.iconset
+//   ClaudeProgress --ask-restart-claude | --restart-claude   (after an install)
 
 import AppKit
 
@@ -1108,6 +1109,66 @@ func renderIcon(to dir: String) -> Int32 {
     return 0
 }
 
+// MARK: - Restarting Claude after an install
+
+// The Claude desktop app. (The override is only for testing with a stand-in.)
+let CLAUDE_APP_ID = environment["CLAUDE_PROGRESS_RESTART_ID"] ?? "com.anthropic.claudefordesktop"
+
+func notice(_ title: String, _ text: String) {
+    let alert = NSAlert()
+    alert.messageText = title
+    alert.informativeText = text
+    alert.runModal()
+}
+
+/// Quits the Claude desktop app and opens it again, so it loads the mod.
+/// With `ask`, first asks the person whether to do it now or later. Started
+/// by setup.sh (--ask-restart-claude from the .pkg, --restart-claude after
+/// install.command asked in Terminal). Does nothing if Claude isn't open.
+func restartClaude(ask: Bool) -> Int32 {
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    guard let claude = NSRunningApplication.runningApplications(withBundleIdentifier: CLAUDE_APP_ID).first,
+          let url = claude.bundleURL else { return 0 }
+    app.activate(ignoringOtherApps: true)
+    if ask {
+        let alert = NSAlert()
+        alert.messageText = "Restart Claude now?"
+        alert.informativeText = "Claude needs to quit and open again before its sessions show up in the "
+            + "progress widget. Anything Claude is working on right now stops when it quits.\n\n"
+            + "If you choose Later, quit Claude (Command-Q) and open it again when it suits you."
+        alert.addButton(withTitle: "Restart Claude Now")
+        alert.addButton(withTitle: "Later")
+        if alert.runModal() != .alertFirstButtonReturn { return 0 }
+    }
+    claude.terminate()
+    // Claude may ask something first (about work in progress, say), so give
+    // the person time to answer; if it stays open, they chose to keep it.
+    let deadline = Date().addingTimeInterval(120)
+    while !claude.isTerminated && Date() < deadline {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+    }
+    if !claude.isTerminated {
+        notice("Claude is still open", "So it wasn't restarted. Quit Claude (Command-Q) and open it again "
+               + "when it suits you; its sessions show up in the progress widget after that.")
+        return 1
+    }
+    let open = Process()
+    open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    open.arguments = [url.path]
+    do {
+        try open.run()
+        open.waitUntilExit()
+    } catch {
+        logError("reopen Claude", "\(error)")
+    }
+    if open.terminationStatus != 0 {
+        notice("Couldn't open Claude again", "Open Claude yourself; its sessions show up in the progress widget now.")
+        return 1
+    }
+    return 0
+}
+
 func uncaught(_ ex: NSException) {
     logError("uncaught", "\(ex.name.rawValue): \(ex.reason ?? "")")
 }
@@ -1118,6 +1179,7 @@ var snapshotOut: String? = nil
 var iconOut: String? = nil
 var snapTheme = "dark"
 var snapScale = 1.0
+var restartMode: Bool? = nil  // true: ask first; false: just restart
 var args = Array(CommandLine.arguments.dropFirst())
 while !args.isEmpty {
     let a = args.removeFirst()
@@ -1126,6 +1188,8 @@ while !args.isEmpty {
     case "--render-icon": iconOut = args.isEmpty ? nil : args.removeFirst()
     case "--theme": snapTheme = args.isEmpty ? snapTheme : args.removeFirst()
     case "--scale": snapScale = Double(args.isEmpty ? "" : args.removeFirst()) ?? snapScale
+    case "--ask-restart-claude": restartMode = true
+    case "--restart-claude": restartMode = false
     default:
         var isDir: ObjCBool = false
         if !a.hasPrefix("-"), FileManager.default.fileExists(atPath: a, isDirectory: &isDir), isDir.boolValue {
@@ -1136,6 +1200,7 @@ while !args.isEmpty {
 
 if let out = iconOut { exit(renderIcon(to: out)) }
 if let out = snapshotOut { exit(snapshot(to: out, theme: snapTheme, scale: snapScale)) }
+if let ask = restartMode { exit(restartClaude(ask: ask)) }
 
 // One copy at a time: the first holds a lock for as long as it runs; a
 // second asks it to come forward and quits.
